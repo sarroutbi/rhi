@@ -1,5 +1,6 @@
 #include <iostream>
 #include <set>
+#include <sstream>
 
 struct buffer{
 public:
@@ -7,10 +8,12 @@ public:
     return (prio) < (other.prio);
   }
   std::string dump() const {
-    return std::to_string(value);
+    std::stringstream s;
+    s << value << ":" << prio;
+    return s.str();
   }
-  uint64_t prio;
   uint64_t value;
+  uint64_t prio;
 };
 
 using buffer_t = struct buffer;
@@ -39,11 +42,10 @@ private:
   void insert_element(const buffer_t& buffer) {
     m_buffer_list.insert(buffer);
   }
-  std::set<buffer_t> m_buffer_list;
+  std::multiset<buffer_t> m_buffer_list;
 };
 
 bool priority_command(const std::string& cmd) {
-  // TODO: check if priority command
   uint32_t value;
   uint32_t prio;
   if(sscanf(cmd.c_str(), "%u:%u", &value, &prio) != 2) {
@@ -64,7 +66,6 @@ void process_command(const std::string& cmd, Buffer& b) {
   } else if("remove" == cmd) {
     b.remove_first();
   } else {
-    fprintf(stderr, "ADDING:%s\n", cmd.c_str());
     b.add(cmd);
   }
   return;
