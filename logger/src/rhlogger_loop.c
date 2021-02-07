@@ -131,7 +131,7 @@ static void rhlogger_loop(char** file_array, uint32_t file_array_size) {
         log_counter = 0;
       }
       if(rhlogger_check_or_add_entry(log_array, total_log_counter, buff)) {
-        printf("[%lu]:%s\n", total_log_counter, log_array[total_log_counter]->log_entry);
+        printf("%s\n", log_array[total_log_counter]->log_entry);
         rhlogger_dump_dst_files(farray, file_array_size, buff, length);
         total_log_counter+=1;
       }
@@ -141,6 +141,7 @@ static void rhlogger_loop(char** file_array, uint32_t file_array_size) {
   if(total_log_counter) {
     dump_most_frequent(log_array, total_log_counter);
   }
+  printf("\n");
   rhlogger_close_dst_files(farray, file_array_size);
   rhlogger_clean_log_array(log_array, total_log_counter);
 }
