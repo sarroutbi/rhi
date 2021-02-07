@@ -36,25 +36,26 @@ static int rhlogger_create_usocket() {
   return 0;
 }
 
-static void clean_log_array(log_entry_t** log_array, int log_array_size) {
+static void rhlogger_clean_log_array(log_entry_t** log_array, int log_array_size) {
   for(int i = 0; i < log_array_size; i++) {
+    free(log_array[i]->log_entry);
     free(log_array[i]);
   }
   free(log_array);
 }
 
-static void add_entry(log_entry_t** log_array, uint64_t pos, char* log) {
+static void rhlogger_add_entry(log_entry_t** log_array, uint64_t pos, char* log) {
   log_array[pos] = (log_entry_t*)malloc(sizeof(log_entry_t));
   log_array[pos]->log_entry = (char*)malloc(strlen(log)*sizeof(char));
   strncpy(log_array[pos]->log_entry, log, strlen(log)-1);
   log_array[pos]->occurrences++;
 }
 
-static uint8_t check_or_add_entry(log_entry_t** log_array, uint64_t total_log_counter, char* log) {
+static uint8_t rhlogger_check_or_add_entry(log_entry_t** log_array, uint64_t total_log_counter, char* log) {
   // TODO: this could be ordered after insertion for performance, but nothing specified in exercise
   uint8_t added = 0;
   if(!total_log_counter) {
-    add_entry(log_array, total_log_counter, log);
+    rhlogger_add_entry(log_array, total_log_counter, log);
     return 1;
   }
   for(uint64_t entry = 0; entry < total_log_counter; entry++) {
@@ -63,7 +64,7 @@ static uint8_t check_or_add_entry(log_entry_t** log_array, uint64_t total_log_co
       return 0;
     }
   }
-  add_entry(log_array, total_log_counter, log);
+  rhlogger_add_entry(log_array, total_log_counter, log);
   return 1;
 }
 
@@ -81,7 +82,29 @@ static void dump_most_frequent(log_entry_t** log_array, int log_array_size) {
   fflush(stdout);
 }
 
-static void rhlogger_loop(char** farray) {
+static void rhlogger_open_dst_files(char** fnarray, FILE** farray, uint32_t file_array_size) {
+  for(uint32_t i = 0; i < file_array_size; i++) {
+    farray[i] = fopen(fnarray[i], "a+");
+  }
+}
+
+static void rhlogger_dump_dst_files(FILE** farray, uint32_t file_array_size, char* buff, uint32_t length) {
+  size_t wrote = 0;
+  for(uint32_t i = 0; i < file_array_size; i++) {
+    wrote = fwrite(buff, 1, length, farray[i]);
+    if(wrote < length) {
+      fprintf(stderr, "WARNING: wrote less than expected:(%u), length\n", length);
+    }
+  }
+}
+
+static void rhlogger_close_dst_files(FILE** farray, uint32_t file_array_size) {
+  for(uint32_t i = 0; i < file_array_size; i++) {
+    fclose(farray[i]);
+  }
+}
+
+static void rhlogger_loop(char** file_array, uint32_t file_array_size) {
   uint32_t length = 0;
   uint32_t overrides = 0;
   uint64_t log_counter = 0;
@@ -89,8 +112,11 @@ static void rhlogger_loop(char** farray) {
   int flags = 0;
   char buff[MAX_LEN];
   log_entry_t** log_array;
+  FILE** farray;
   uint64_t log_array_size = LOG_ARRAY_SIZE;
   log_array = (log_entry_t**)malloc(sizeof(log_entry_t*)*log_array_size);
+  farray = (FILE**)malloc(sizeof(FILE*)*file_array_size);
+  rhlogger_open_dst_files(file_array, farray, file_array_size);
   flags |= MSG_DONTWAIT;
   while(g_running) {
     memset(buff, 0, MAX_LEN);
@@ -104,8 +130,9 @@ static void rhlogger_loop(char** farray) {
         log_array = realloc(log_array, log_array_size);
         log_counter = 0;
       }
-      if(check_or_add_entry(log_array, total_log_counter, buff)) {
+      if(rhlogger_check_or_add_entry(log_array, total_log_counter, buff)) {
         printf("[%lu]:%s\n", total_log_counter, log_array[total_log_counter]->log_entry);
+        rhlogger_dump_dst_files(farray, file_array_size, buff, length);
         total_log_counter+=1;
       }
     }
@@ -114,15 +141,16 @@ static void rhlogger_loop(char** farray) {
   if(total_log_counter) {
     dump_most_frequent(log_array, total_log_counter);
   }
-  clean_log_array(log_array, total_log_counter);
+  rhlogger_close_dst_files(farray, file_array_size);
+  rhlogger_clean_log_array(log_array, total_log_counter);
 }
 
-int rhlogger_run(char** farray) {
+int rhlogger_run(char** farray, uint32_t farray_size) {
   // Create Unix Socket
   if(rhlogger_create_usocket()) {
     fprintf(stderr, "Error on Unix Socket creation: [%d(%s)]\n", errno, strerror(errno));
   }
   // Run loop
-  rhlogger_loop(farray);
+  rhlogger_loop(farray, farray_size);
 }
 

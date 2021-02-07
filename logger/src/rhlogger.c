@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
   farray_size = argc-1;
   farray = (char**)malloc(sizeof(char*)*farray_size);
   parse_args(farray, argc, argv);
-  rhlogger_run(farray);
+  rhlogger_run(farray, farray_size);
   clean_args(farray, farray_size);
   return 0;
 }
