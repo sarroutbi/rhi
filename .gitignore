@@ -1,0 +1,12 @@
+CMakeCache.txt
+*/CMakeFiles/
+*/Makefile
+*/bin/
+*/cmake_install.cmake
+*/core
+*/src/CMakeCache.txt
+*/src/CMakeFiles/
+*/src/Makefile
+*/src/cmake_install.cmake
+*/src/usocket.c
+
