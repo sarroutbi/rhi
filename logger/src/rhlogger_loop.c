@@ -8,8 +8,11 @@
 #include <stdlib.h>
 
 #define USOCKET "/dev/log"
-#define MAX_LEN 1024
+#define MAX_MONTH 3
+#define MAX_LEN 65535
+#define MAX_USER 1024
 #define LOG_ARRAY_SIZE 65535
+#define MAX_MSG 65535
 
 uint8_t g_running = 1;
 uint32_t g_socket = 0;
@@ -44,10 +47,21 @@ static void rhlogger_clean_log_array(log_entry_t** log_array, int log_array_size
   free(log_array);
 }
 
+static void remove_date(char* log, char** no_date) {
+  // Format to remove is of the type:
+  // <13>Feb  7 23:45:22 user: msg
+  int nu, day, hour, min, sec;
+  char month[MAX_MONTH];
+  char msg[MAX_MSG];
+  char u[MAX_USER];
+  sscanf(log, "<%d>%s  %d %d:%d:%d %[^:]:%s", &nu, month, &day, &hour, &min, &sec, u, msg);
+  snprintf(*no_date, strlen(log), "%s: %s", u, msg);
+}
+
 static void rhlogger_add_entry(log_entry_t** log_array, uint64_t pos, char* log) {
   log_array[pos] = (log_entry_t*)malloc(sizeof(log_entry_t));
   log_array[pos]->log_entry = (char*)malloc(strlen(log)*sizeof(char));
-  strncpy(log_array[pos]->log_entry, log, strlen(log));
+  remove_date(log, &log_array[pos]->log_entry);
   log_array[pos]->occurrences++;
 }
 
@@ -59,10 +73,14 @@ static uint8_t rhlogger_check_or_add_entry(log_entry_t** log_array, uint64_t tot
     return 1;
   }
   for(uint64_t entry = 0; entry < total_log_counter; entry++) {
-    if(strncmp(log_array[entry]->log_entry, log, strlen(log)) == 0) {
+    char* log_no_date = (char*)malloc(strlen(log) * sizeof(char));
+    remove_date(log, &log_no_date);
+    if(strncmp(log_array[entry]->log_entry, log_no_date, strlen(log)) == 0) {
       log_array[entry]->occurrences++;
+      free(log_no_date);
       return 0;
     }
+    free(log_no_date);
   }
   rhlogger_add_entry(log_array, total_log_counter, log);
   return 1;
@@ -131,7 +149,7 @@ static void rhlogger_loop(char** file_array, uint32_t file_array_size) {
         log_counter = 0;
       }
       if(rhlogger_check_or_add_entry(log_array, total_log_counter, buff)) {
-        printf("%s\n", log_array[total_log_counter]->log_entry);
+        printf("%s\n", buff);
         rhlogger_dump_dst_files(farray, file_array_size, buff, length);
         total_log_counter+=1;
       }
