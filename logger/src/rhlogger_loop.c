@@ -47,7 +47,7 @@ static void rhlogger_clean_log_array(log_entry_t** log_array, int log_array_size
 static void rhlogger_add_entry(log_entry_t** log_array, uint64_t pos, char* log) {
   log_array[pos] = (log_entry_t*)malloc(sizeof(log_entry_t));
   log_array[pos]->log_entry = (char*)malloc(strlen(log)*sizeof(char));
-  strncpy(log_array[pos]->log_entry, log, strlen(log)-1);
+  strncpy(log_array[pos]->log_entry, log, strlen(log));
   log_array[pos]->occurrences++;
 }
 
@@ -59,7 +59,7 @@ static uint8_t rhlogger_check_or_add_entry(log_entry_t** log_array, uint64_t tot
     return 1;
   }
   for(uint64_t entry = 0; entry < total_log_counter; entry++) {
-    if(strncmp(log_array[entry]->log_entry, log, strlen(log)-1) == 0) {
+    if(strncmp(log_array[entry]->log_entry, log, strlen(log)) == 0) {
       log_array[entry]->occurrences++;
       return 0;
     }
@@ -77,8 +77,8 @@ static void dump_most_frequent(log_entry_t** log_array, int log_array_size) {
       most_frequent_log_idx = entry;
     }
   }
-  printf("\n\nMost common log:[%s](%lu times)\n\n", log_array[most_frequent_log_idx]->log_entry,
-         log_array[most_frequent_log_idx]->occurrences );
+  printf("%lu --> %s", log_array[most_frequent_log_idx]->occurrences,
+         log_array[most_frequent_log_idx]->log_entry);
   fflush(stdout);
 }
 
